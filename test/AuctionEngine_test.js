@@ -30,7 +30,7 @@ describe("AucEngine", function () {
     it("creates auction correctly", async function() {
       const duration = 60
       const tx = await auct.createAuction(
-        ethers.utils.parseEther("0.0001"),
+        ethers.parseEther("0.0001"),
         3,
         "fake item",
         duration
@@ -50,7 +50,7 @@ describe("AucEngine", function () {
   describe("buy", function () {
     it("allows to buy", async function() {
       await auct.connect(seller).createAuction(
-        ethers.utils.parseEther("0.0001"),
+        ethers.parseEther("0.0001"),
         3,
         "fake item",
         60
@@ -60,14 +60,17 @@ describe("AucEngine", function () {
       await delay(1000)
 
       const buyTx = await auct.connect(buyer).
-        buy(0, {value: ethers.utils.parseEther("0.0001")})
+        buy(0, {value: ethers.parseEther("0.0001")})
 
       const cAuction = await auct.auctions(0)
-      const finalPrice = cAuction.finalPrice
+      const finalPrice = cAuction.finalPrice;
+      const fee = (finalPrice * 10n) / 100n;
+      const expectedBalanceChange = finalPrice - fee;
+
       await expect(() => buyTx).
         to.changeEtherBalance(
-          seller, finalPrice - Math.floor((finalPrice * 10) / 100)
-        )
+          seller, expectedBalanceChange
+        );
 
       await expect(buyTx)
         .to.emit(auct, 'AuctionEnded')
@@ -75,8 +78,8 @@ describe("AucEngine", function () {
 
       await expect(
         auct.connect(buyer).
-          buy(0, {value: ethers.utils.parseEther("0.0001")})
-      ).to.be.revertedWith('stopped!')
+          buy(0, {value: ethers.parseEther("0.0001")})
+      ).to.be.revertedWith('Auction has been stopped')
     })
   })
 })
